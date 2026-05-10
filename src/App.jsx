@@ -1001,7 +1001,7 @@ function FlashCrowdBar({ selected }) {
         {total * 47}+ players predicted today
       </div>
       <div style={{ display:"flex", gap:"2px", height:"20px", borderRadius:"6px", overflow:"hidden" }}>
-        {FLASH_MOVES.map(m => {
+        {getFlashMoves(154.65).map(m => {
           const pct = Math.round((FLASH_CROWD[m.id] / total) * 100);
           const isSel = selected?.id === m.id;
           return (
@@ -1193,7 +1193,7 @@ function DailyFlashScreen() {
             </div>
 
             <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom:"18px" }}>
-              {FLASH_MOVES.map(m => {
+              {getFlashMoves(154.65).map(m => {
                 const sel = selected?.id === m.id;
                 return (
                   <button key={m.id} onClick={() => setSelected(m)} style={{

@@ -401,9 +401,9 @@ function Confetti() {
 // Hot items: most predicted this week, with crowd sentiment lean
 const HOT_ITEMS = [
   { id:"eggs",    predictions: 2841, lean:"up",   leanPct: 71, hot: true  },
-  { id:"petrol",  predictions: 2103, lean:"up",   leanPct: 64, hot: true  },
-  { id:"butter",  predictions: 1876, lean:"down",  leanPct: 53, hot: false },
-  { id:"chicken", predictions: 1590, lean:"up",   leanPct: 58, hot: false },
+  { id:"butter",  predictions: 2103, lean:"down",  leanPct: 53, hot: true  },
+  { id:"chicken", predictions: 1876, lean:"up",   leanPct: 58, hot: false },
+  { id:"milk",    predictions: 1590, lean:"down",  leanPct: 52, hot: false },
 ];
 
 function HotStrip({ onPick, selectedId, items }) {

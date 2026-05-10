@@ -1059,11 +1059,12 @@ function FlashResultCard({ move, onReset }) {
 }
 
 function DailyFlashScreen() {
+  const FALLBACK_PETROL = { current:154.65, yesterday:155.2, weekAgo:152.8, change24h:-0.6, trend:"down", history:[152.8,153.1,154.0,153.6,155.2,155.9,154.65], lastUpdated:"May 2026", source:"DESNZ Weekly Data", context:"Source: UK Dept. for Energy Security & Net Zero" };
   const [selected, setSelected] = useState(null);
   const [locked, setLocked]     = useState(false);
   const [showHow, setShowHow]   = useState(false);
-  const [petrol, setPetrol]     = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [petrol, setPetrol]     = useState(FALLBACK_PETROL);
+  const [loading, setLoading]   = useState(false);
 
   useEffect(() => {
     async function fetchPrice() {

@@ -1113,17 +1113,83 @@ export default function PricePunch() {
         .tab-btn { flex:1; padding:11px 4px; border:none; background:transparent; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all 0.15s; border-radius:10px; }
         .tab-btn.active { background:${NAVY}; animation:popIn 0.2s ease; }
 
+        /* Desktop sidebar nav */
+        .desktop-nav-btn {
+          width:100%; padding:12px 16px; border:none; background:transparent;
+          cursor:pointer; display:flex; align-items:center; gap:12px;
+          border-radius:12px; transition:all 0.15s; text-align:left;
+          font-family:'Outfit',sans-serif;
+        }
+        .desktop-nav-btn:hover { background:rgba(255,255,255,0.08); }
+        .desktop-nav-btn.active { background:${GOLD}; }
+
         ::-webkit-scrollbar { width:3px; }
         ::-webkit-scrollbar-thumb { background:#ccc; border-radius:3px; }
+
+        /* Responsive breakpoints */
+        .app-shell {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+          max-width: 430px;
+          margin: 0 auto;
+        }
+
+        .mobile-header { display:flex; }
+        .mobile-tabs   { display:flex; }
+        .desktop-layout { display:none; }
+
+        @media (min-width: 900px) {
+          body { background: #e8e4dc; }
+
+          .app-shell { display:none; }
+
+          .desktop-layout {
+            display: flex;
+            min-height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            gap: 24px;
+          }
+
+          .desktop-sidebar {
+            width: 240px;
+            flex-shrink: 0;
+            background: ${NAVY};
+            border-radius: 24px;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 24px;
+            height: calc(100vh - 48px);
+          }
+
+          .desktop-main {
+            flex: 1;
+            background: ${CREAM};
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 48px);
+          }
+
+          .desktop-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+          }
+        }
       `}</style>
 
       {showConfetti && <Confetti />}
       {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}
 
-      <div style={{ maxWidth:"430px", margin:"0 auto", minHeight:"100vh", display:"flex", flexDirection:"column" }}>
-
-        {/* Header */}
-        <div style={{ background:NAVY, padding:"18px 18px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+      {/* ── MOBILE layout (< 900px) ── */}
+      <div className="app-shell">
+        <div className="mobile-header" style={{ background:NAVY, padding:"18px 18px 14px", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
           <div>
             <div style={{ fontFamily:FONT_DISPLAY, fontSize:"30px", color:GOLD, letterSpacing:"0.06em", lineHeight:1 }}>
               PRICE<span style={{ color:"white" }}>PUNCH</span>
@@ -1143,9 +1209,7 @@ export default function PricePunch() {
             </div>
           </div>
         </div>
-
-        {/* Tab bar */}
-        <div style={{ background:NAVY, padding:"0 10px 10px", display:"flex", gap:"4px", flexShrink:0 }}>
+        <div className="mobile-tabs" style={{ background:NAVY, padding:"0 10px 10px", gap:"4px", flexShrink:0 }}>
           {TABS.map(t=>(
             <button key={t.id} className={`tab-btn ${tab===t.id?"active":""}`} onClick={()=>setTab(t.id)}>
               <span style={{ fontSize:"16px" }}>{t.emoji}</span>
@@ -1153,14 +1217,90 @@ export default function PricePunch() {
             </button>
           ))}
         </div>
-
-        {/* Screen */}
         <div style={{ flex:1, overflowY:"auto", paddingTop:"18px" }}>
           {tab==="flash"       && <DailyFlashScreen />}
           {tab==="predict"     && <PredictScreen     onSubmit={handleSubmit} score={score} streak={streak} />}
           {tab==="mycalls"     && <MyCallsScreen     predictions={predictions} onGoPredict={()=>setTab("predict")} />}
           {tab==="settled"     && <SettledScreen />}
           {tab==="leaderboard" && <LeaderboardScreen score={score} />}
+        </div>
+      </div>
+
+      {/* ── DESKTOP layout (≥ 900px) ── */}
+      <div className="desktop-layout">
+
+        {/* Sidebar */}
+        <div className="desktop-sidebar">
+          {/* Logo */}
+          <div style={{ marginBottom:"32px", paddingLeft:"8px" }}>
+            <div style={{ fontFamily:FONT_DISPLAY, fontSize:"34px", color:GOLD, letterSpacing:"0.06em", lineHeight:1 }}>
+              PRICE<span style={{ color:"white" }}>PUNCH</span>
+            </div>
+            <div style={{ fontSize:"9px", color:"#555", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:"3px", fontFamily:FONT_BODY }}>
+              Predict · Learn · Win
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"28px" }}>
+            <div style={{ background:"rgba(255,255,255,0.07)", borderRadius:"12px", padding:"12px", textAlign:"center" }}>
+              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:"#ff8c42" }}>🔥 {streak}</div>
+              <div style={{ fontSize:"8px", color:"#555", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Streak</div>
+            </div>
+            <div style={{ background:GOLD, borderRadius:"12px", padding:"12px", textAlign:"center" }}>
+              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:NAVY }}>{score.toLocaleString()}</div>
+              <div style={{ fontSize:"8px", color:"#888", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Points</div>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <div style={{ display:"flex", flexDirection:"column", gap:"4px", flex:1 }}>
+            {TABS.map(t=>(
+              <button key={t.id} className={`desktop-nav-btn ${tab===t.id?"active":""}`} onClick={()=>setTab(t.id)}>
+                <span style={{ fontSize:"20px" }}>{t.emoji}</span>
+                <span style={{ fontSize:"14px", fontWeight:800, color: tab===t.id ? NAVY : "rgba(255,255,255,0.6)", fontFamily:FONT_BODY }}>
+                  {t.label}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ paddingLeft:"8px", marginTop:"auto" }}>
+            <div style={{ fontSize:"10px", color:"#444", fontFamily:FONT_BODY }}>pricepunch.co.uk</div>
+            <div style={{ fontSize:"9px", color:"#333", fontFamily:FONT_BODY, marginTop:"2px" }}>Beta · Free to play</div>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="desktop-main">
+          {/* Desktop top bar */}
+          <div style={{ background:NAVY, padding:"20px 28px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+            <div>
+              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:"white", letterSpacing:"0.06em" }}>
+                {TABS.find(t=>t.id===tab)?.emoji} {TABS.find(t=>t.id===tab)?.label.toUpperCase()}
+              </div>
+              <div style={{ fontSize:"11px", color:"#555", fontFamily:FONT_BODY, marginTop:"2px" }}>
+                {tab==="flash" && "Daily petrol price prediction — settles at midnight"}
+                {tab==="predict" && "Pick an item and predict where the price is heading"}
+                {tab==="mycalls" && "Your active predictions and their status"}
+                {tab==="settled" && "Resolved predictions with explanations"}
+                {tab==="leaderboard" && "Weekly rankings — top predictors win prizes"}
+              </div>
+            </div>
+            <div style={{ background:"rgba(255,255,255,0.08)", borderRadius:"10px", padding:"8px 16px", fontSize:"12px", color:"rgba(255,255,255,0.5)", fontFamily:FONT_BODY }}>
+              🇬🇧 UK prices · Live data
+            </div>
+          </div>
+
+          {/* Screen content */}
+          <div className="desktop-content">
+            {tab==="flash"       && <DailyFlashScreen />}
+            {tab==="predict"     && <PredictScreen     onSubmit={handleSubmit} score={score} streak={streak} />}
+            {tab==="mycalls"     && <MyCallsScreen     predictions={predictions} onGoPredict={()=>setTab("predict")} />}
+            {tab==="settled"     && <SettledScreen />}
+            {tab==="leaderboard" && <LeaderboardScreen score={score} />}
+          </div>
         </div>
       </div>
     </>

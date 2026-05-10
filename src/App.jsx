@@ -1,6 +1,148 @@
 import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Supabase ─────────────────────────────────────────────────────────────────
+
+const supabase = createClient(
+  "https://gsvxwxdyuqlrlphwxquz.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdzdnh3eGR5dXFscmxwaHd4cXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzU5MTAsImV4cCI6MjA5MDMxMTkxMH0.WIQoECMsIfcT-o-tNcRqc1q4MEnWEF6jkzel-UzPo5k"
+);
+
+// ─── Auth Modal ───────────────────────────────────────────────────────────────
+
+function AuthModal({ onAuth, trigger }) {
+  const [mode, setMode]         = useState("signup"); // signup | login
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+
+  const triggerMessages = {
+    punches:     "Save your PUNCHES before they disappear!",
+    streak:      "You're on a streak! Save it before you lose it.",
+    leaderboard: "Create an account to appear on the leaderboard.",
+    prediction:  "Sign up to save your predictions and earn PUNCHES 🥊",
+    default:     "Create a free account to save your progress.",
+  };
+
+  async function handleSubmit() {
+    setLoading(true);
+    setError("");
+    try {
+      if (mode === "signup") {
+        // Check username not taken
+        const { data: existing } = await supabase
+          .from("pp_users")
+          .select("id")
+          .eq("username", username.trim())
+          .single();
+        if (existing) { setError("Username taken — try another"); setLoading(false); return; }
+
+        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) throw signUpError;
+
+        // Create profile
+        await supabase.from("pp_users").insert({
+          id: data.user.id,
+          username: username.trim(),
+          punches: 100, // 100 welcome PUNCHES
+          streak: 0,
+        });
+        onAuth({ id: data.user.id, username: username.trim(), punches: 100, streak: 0 });
+      } else {
+        const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+        if (loginError) throw loginError;
+        const { data: profile } = await supabase.from("pp_users").select("*").eq("id", data.user.id).single();
+        onAuth(profile);
+      }
+    } catch (e) {
+      setError(e.message || "Something went wrong");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:600, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+      <div style={{ width:"100%", maxWidth:"430px", background:"#fffef5", borderRadius:"24px 24px 0 0", padding:"28px 24px 40px", fontFamily:FONT_BODY, animation:"slideIn 0.35s ease" }}>
+
+        {/* PUNCHES at stake */}
+        <div style={{ background:NAVY, borderRadius:"14px", padding:"14px 16px", marginBottom:"20px", display:"flex", alignItems:"center", gap:"12px" }}>
+          <div style={{ fontSize:"28px" }}>🥊</div>
+          <div>
+            <div style={{ fontFamily:FONT_DISPLAY, fontSize:"20px", color:GOLD, letterSpacing:"0.06em" }}>
+              {triggerMessages[trigger] || triggerMessages.default}
+            </div>
+            <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.5)", marginTop:"2px" }}>
+              Free forever · No credit card needed
+            </div>
+          </div>
+        </div>
+
+        {/* Mode toggle */}
+        <div style={{ display:"flex", background:"#f0ede6", borderRadius:"12px", padding:"4px", marginBottom:"20px" }}>
+          {["signup","login"].map(m => (
+            <button key={m} onClick={() => { setMode(m); setError(""); }} style={{
+              flex:1, padding:"10px", borderRadius:"10px",
+              border:"none", cursor:"pointer", fontFamily:FONT_BODY,
+              fontSize:"13px", fontWeight:800,
+              background: mode===m ? "white" : "transparent",
+              color: mode===m ? NAVY : "#888",
+              boxShadow: mode===m ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              transition:"all 0.15s",
+              textTransform:"uppercase", letterSpacing:"0.06em",
+            }}>
+              {m === "signup" ? "Create Account" : "Log In"}
+            </button>
+          ))}
+        </div>
+
+        {/* Fields */}
+        <div style={{ display:"flex", flexDirection:"column", gap:"10px", marginBottom:"16px" }}>
+          {mode === "signup" && (
+            <input
+              type="text" placeholder="Username (shown on leaderboard)"
+              value={username} onChange={e => setUsername(e.target.value)}
+              style={{ padding:"13px 16px", borderRadius:"12px", border:"2.5px solid #ddd", fontSize:"14px", fontFamily:FONT_BODY, outline:"none" }}
+            />
+          )}
+          <input
+            type="email" placeholder="Email address"
+            value={email} onChange={e => setEmail(e.target.value)}
+            style={{ padding:"13px 16px", borderRadius:"12px", border:"2.5px solid #ddd", fontSize:"14px", fontFamily:FONT_BODY, outline:"none" }}
+          />
+          <input
+            type="password" placeholder="Password"
+            value={password} onChange={e => setPassword(e.target.value)}
+            style={{ padding:"13px 16px", borderRadius:"12px", border:"2.5px solid #ddd", fontSize:"14px", fontFamily:FONT_BODY, outline:"none" }}
+          />
+        </div>
+
+        {error && (
+          <div style={{ background:"#fff0f0", border:"1.5px solid #ffaaaa", borderRadius:"10px", padding:"10px 14px", fontSize:"12px", color:"#cc3300", marginBottom:"14px", fontFamily:FONT_BODY }}>
+            {error}
+          </div>
+        )}
+
+        {mode === "signup" && (
+          <div style={{ background:"#f0fff4", border:"1.5px solid #00cc6633", borderRadius:"10px", padding:"10px 14px", fontSize:"11px", color:"#1a7a3a", marginBottom:"14px", fontFamily:FONT_BODY, display:"flex", alignItems:"center", gap:"8px" }}>
+            <span>🎁</span>
+            <span>You'll get <strong>100 welcome PUNCHES</strong> just for signing up</span>
+          </div>
+        )}
+
+        <CtaBtn disabled={loading || !email || !password || (mode==="signup" && !username)} onClick={handleSubmit}>
+          {loading ? "..." : mode === "signup" ? "🥊 Create My Account" : "Log In"}
+        </CtaBtn>
+
+        <button onClick={() => onAuth(null)} style={{ display:"block", margin:"14px auto 0", background:"none", border:"none", fontSize:"12px", color:"#bbb", cursor:"pointer", fontFamily:FONT_BODY }}>
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 const ITEMS = [
   { id: "eggs",    name: "Free Range Eggs (12)", emoji: "🥚", price: 3.25, category: "Dairy" },
@@ -669,7 +811,7 @@ function SettledScreen() {
 
 // ─── SCREEN 4 — Leaderboard ──────────────────────────────────────────────────
 
-function LeaderboardScreen({ score }) {
+function LeaderboardScreen({ score, user, onAuthTrigger }) {
   const board = [
     { name:"TraderJoe92",   score:2840, streak:12, acc:89 },
     { name:"InflationHawk", score:2210, streak:7,  acc:76 },
@@ -706,14 +848,21 @@ function LeaderboardScreen({ score }) {
       ))}
 
       {/* Your position */}
-      <div style={{ background:NAVY, borderRadius:"14px", padding:"13px 15px", marginTop:"14px", display:"flex", alignItems:"center", gap:"13px", border:`3px solid ${GOLD}` }}>
-        <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:GOLD, width:"30px", textAlign:"center" }}>#42</div>
-        <div style={{ flex:1 }}>
-          <div style={{ fontWeight:800, fontSize:"14px", color:"white", fontFamily:FONT_BODY }}>You</div>
-          <div style={{ fontSize:"10px", color:"#888", fontFamily:FONT_BODY }}>Keep predicting to climb! 🎯</div>
+      {user ? (
+        <div style={{ background:NAVY, borderRadius:"14px", padding:"13px 15px", marginTop:"14px", display:"flex", alignItems:"center", gap:"13px", border:`3px solid ${GOLD}` }}>
+          <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:GOLD, width:"30px", textAlign:"center" }}>#42</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:800, fontSize:"14px", color:"white", fontFamily:FONT_BODY }}>@{user.username}</div>
+            <div style={{ fontSize:"10px", color:"#888", fontFamily:FONT_BODY }}>Keep predicting to climb! 🎯</div>
+          </div>
+          <div style={{ fontFamily:FONT_DISPLAY, fontSize:"20px", color:GOLD }}>🥊 {score}</div>
         </div>
-        <div style={{ fontFamily:FONT_DISPLAY, fontSize:"20px", color:GOLD }}>{score.toLocaleString()}</div>
-      </div>
+      ) : (
+        <div onClick={() => onAuthTrigger("leaderboard")} style={{ background:"rgba(247,233,78,0.1)", border:`2px dashed ${GOLD}`, borderRadius:"14px", padding:"16px", marginTop:"14px", textAlign:"center", cursor:"pointer" }}>
+          <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:GOLD, marginBottom:"4px" }}>APPEAR ON THE LEADERBOARD</div>
+          <div style={{ fontSize:"12px", color:"#888", fontFamily:FONT_BODY }}>Create a free account to save your score 🥊</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1075,17 +1224,81 @@ const TABS = [
 ];
 
 export default function PricePunch() {
-  const [tab, setTab]         = useState("flash");
-  const [score, setScore]     = useState(420);
-  const [streak, setStreak]   = useState(3);
+  const [tab, setTab]             = useState("flash");
+  const [user, setUser]           = useState(null); // null = guest
+  const [score, setScore]         = useState(0);
+  const [streak, setStreak]       = useState(0);
+  const [punches, setPunches]     = useState(0);
   const [predictions, setPredictions] = useState([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("pp_seen"));
+  const [showAuth, setShowAuth]   = useState(false);
+  const [authTrigger, setAuthTrigger] = useState("default");
 
-  function handleSubmit({ item, move, tf, pts }) {
-    setPredictions(prev => [{ id:Date.now(), item, move, tf, pts }, ...prev]);
+  // Check for existing session on load
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) loadProfile(session.user.id);
+    });
+    supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) loadProfile(session.user.id);
+    });
+  }, []);
+
+  async function loadProfile(userId) {
+    const { data } = await supabase.from("pp_users").select("*").eq("id", userId).single();
+    if (data) {
+      setUser(data);
+      setPunches(data.punches);
+      setStreak(data.streak);
+    }
+  }
+
+  function triggerAuth(trigger = "default") {
+    setAuthTrigger(trigger);
+    setShowAuth(true);
+  }
+
+  function handleAuth(profile) {
+    setShowAuth(false);
+    if (profile) {
+      setUser(profile);
+      setPunches(profile.punches);
+      setStreak(profile.streak);
+    }
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setPunches(0);
+    setStreak(0);
+  }
+
+  async function handleSubmit({ item, move, tf, pts }) {
+    const newPred = { id:Date.now(), item, move, tf, pts };
+    setPredictions(prev => [newPred, ...prev]);
+
+    // Save to Supabase if logged in
+    if (user) {
+      const settlesAt = new Date(Date.now() + tf.days * 86400000).toISOString();
+      await supabase.from("pp_predictions").insert({
+        user_id: user.id,
+        item_id: item.id,
+        item_name: item.name,
+        move_label: move.label,
+        move_direction: move.dir,
+        timeframe: tf.label,
+        potential_punches: pts,
+        settles_at: settlesAt,
+      });
+    } else {
+      // Guest — prompt sign up after first prediction
+      setTimeout(() => triggerAuth("prediction"), 1500);
+    }
+
     setShowConfetti(true);
-    setTimeout(()=>setShowConfetti(false), 2200);
+    setTimeout(() => setShowConfetti(false), 2200);
     setTab("mycalls");
   }
 
@@ -1186,6 +1399,7 @@ export default function PricePunch() {
 
       {showConfetti && <Confetti />}
       {showOnboarding && <OnboardingModal onDone={() => { localStorage.setItem("pp_seen","1"); setShowOnboarding(false); }} />}
+      {showAuth && <AuthModal onAuth={handleAuth} trigger={authTrigger} />}
 
       {/* ── MOBILE layout (< 900px) ── */}
       <div className="app-shell">
@@ -1199,14 +1413,20 @@ export default function PricePunch() {
             </div>
           </div>
           <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
-            <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:"8px", color:"#888", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Streak</div>
-              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:"#ff8c42", lineHeight:1 }}>🔥 {streak}</div>
-            </div>
-            <div style={{ background:GOLD, borderRadius:"10px", padding:"7px 12px", textAlign:"center" }}>
-              <div style={{ fontSize:"8px", color:"#888", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Points</div>
-              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:NAVY, lineHeight:1 }}>{score.toLocaleString()}</div>
-            </div>
+            {user ? <>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:"8px", color:"#888", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Streak</div>
+                <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:"#ff8c42", lineHeight:1 }}>🔥 {streak}</div>
+              </div>
+              <div style={{ background:GOLD, borderRadius:"10px", padding:"7px 12px", textAlign:"center", cursor:"pointer" }} onClick={handleSignOut}>
+                <div style={{ fontSize:"8px", color:"#888", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>PUNCHES</div>
+                <div style={{ fontFamily:FONT_DISPLAY, fontSize:"18px", color:NAVY, lineHeight:1 }}>🥊 {punches}</div>
+              </div>
+            </> : (
+              <button onClick={() => triggerAuth("default")} style={{ background:GOLD, border:`2px solid ${NAVY}`, borderRadius:"10px", padding:"8px 14px", fontFamily:FONT_DISPLAY, fontSize:"16px", color:NAVY, cursor:"pointer", letterSpacing:"0.06em", boxShadow:`3px 3px 0 rgba(0,0,0,0.2)` }}>
+                SIGN IN
+              </button>
+            )}
           </div>
         </div>
         <div className="mobile-tabs" style={{ background:NAVY, padding:"0 10px 10px", gap:"4px", flexShrink:0 }}>
@@ -1218,11 +1438,11 @@ export default function PricePunch() {
           ))}
         </div>
         <div style={{ flex:1, overflowY:"auto", paddingTop:"18px" }}>
-          {tab==="flash"       && <DailyFlashScreen />}
-          {tab==="predict"     && <PredictScreen     onSubmit={handleSubmit} score={score} streak={streak} />}
+          {tab==="flash"       && <DailyFlashScreen user={user} onAuthTrigger={triggerAuth} />}
+          {tab==="predict"     && <PredictScreen     onSubmit={handleSubmit} score={punches} streak={streak} />}
           {tab==="mycalls"     && <MyCallsScreen     predictions={predictions} onGoPredict={()=>setTab("predict")} />}
           {tab==="settled"     && <SettledScreen />}
-          {tab==="leaderboard" && <LeaderboardScreen score={score} />}
+          {tab==="leaderboard" && <LeaderboardScreen score={punches} user={user} onAuthTrigger={triggerAuth} />}
         </div>
       </div>
 
@@ -1248,8 +1468,8 @@ export default function PricePunch() {
               <div style={{ fontSize:"8px", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Streak</div>
             </div>
             <div style={{ background:GOLD, borderRadius:"12px", padding:"12px", textAlign:"center" }}>
-              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:NAVY }}>{score.toLocaleString()}</div>
-              <div style={{ fontSize:"8px", color:"#888", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Points</div>
+              <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:NAVY }}>🥊 {punches}</div>
+              <div style={{ fontSize:"8px", color:"#888", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Punches</div>
             </div>
           </div>
 
@@ -1267,8 +1487,15 @@ export default function PricePunch() {
 
           {/* Footer */}
           <div style={{ paddingLeft:"8px", marginTop:"auto" }}>
-            <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.4)", fontFamily:FONT_BODY }}>pricepunch.co.uk</div>
-            <div style={{ fontSize:"9px", color:"rgba(255,255,255,0.3)", fontFamily:FONT_BODY, marginTop:"2px" }}>Beta · Free to play</div>
+            {user ? <>
+              <div style={{ fontSize:"12px", color:"rgba(255,255,255,0.7)", fontFamily:FONT_BODY, fontWeight:700 }}>@{user.username}</div>
+              <button onClick={handleSignOut} style={{ background:"none", border:"none", fontSize:"10px", color:"rgba(255,255,255,0.3)", fontFamily:FONT_BODY, cursor:"pointer", padding:"0", marginTop:"3px" }}>Sign out</button>
+            </> : <>
+              <button onClick={() => triggerAuth("default")} style={{ background:GOLD, border:`2px solid rgba(255,255,255,0.2)`, borderRadius:"10px", padding:"9px 16px", fontFamily:FONT_DISPLAY, fontSize:"16px", color:NAVY, cursor:"pointer", letterSpacing:"0.06em", width:"100%" }}>
+                SIGN IN / JOIN
+              </button>
+              <div style={{ fontSize:"9px", color:"rgba(255,255,255,0.3)", fontFamily:FONT_BODY, marginTop:"6px", textAlign:"center" }}>Free · No card needed</div>
+            </>}
           </div>
         </div>
 
@@ -1295,11 +1522,11 @@ export default function PricePunch() {
 
           {/* Screen content */}
           <div className="desktop-content">
-            {tab==="flash"       && <DailyFlashScreen />}
-            {tab==="predict"     && <PredictScreen     onSubmit={handleSubmit} score={score} streak={streak} />}
+            {tab==="flash"       && <DailyFlashScreen user={user} onAuthTrigger={triggerAuth} />}
+            {tab==="predict"     && <PredictScreen     onSubmit={handleSubmit} score={punches} streak={streak} />}
             {tab==="mycalls"     && <MyCallsScreen     predictions={predictions} onGoPredict={()=>setTab("predict")} />}
             {tab==="settled"     && <SettledScreen />}
-            {tab==="leaderboard" && <LeaderboardScreen score={score} />}
+            {tab==="leaderboard" && <LeaderboardScreen score={punches} user={user} onAuthTrigger={triggerAuth} />}
           </div>
         </div>
       </div>

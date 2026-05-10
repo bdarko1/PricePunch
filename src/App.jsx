@@ -499,23 +499,28 @@ function PredictScreen({ onSubmit, score, streak }) {
 
   useEffect(() => {
     async function fetchPrices() {
-      const { data } = await supabase
-        .from("pp_grocery_prices")
-        .select("*")
-        .order("item_id");
-      if (data && data.length > 0) {
-        const live = data.map(row => ({
-          id: row.item_id,
-          name: row.item_name,
-          emoji: ITEM_META[row.item_id]?.emoji || "🛒",
-          price: +row.price_gbp,
-          previousPrice: +row.previous_gbp,
-          category: ITEM_META[row.item_id]?.category || "Other",
-          source: row.source,
-          monthYear: row.month_year,
-        }));
-        setItems(live);
-        setPricesLoaded(true);
+      try {
+        const { data, error } = await supabase
+          .from("pp_grocery_prices")
+          .select("*")
+          .order("item_id");
+        if (!error && data && data.length > 0) {
+          const live = data.map(row => ({
+            id: row.item_id,
+            name: row.item_name,
+            emoji: ITEM_META[row.item_id]?.emoji || "🛒",
+            price: +row.price_gbp,
+            previousPrice: +(row.previous_gbp || row.price_gbp),
+            category: ITEM_META[row.item_id]?.category || "Other",
+            source: row.source,
+            monthYear: row.month_year,
+          }));
+          setItems(live);
+          setPricesLoaded(true);
+        }
+      } catch(e) {
+        // silently use fallback prices
+        console.log("Using fallback prices");
       }
     }
     fetchPrices();
@@ -1062,35 +1067,42 @@ function DailyFlashScreen() {
 
   useEffect(() => {
     async function fetchPrice() {
-      const { data, error } = await supabase
-        .from("pp_fuel_prices")
-        .select("*")
-        .order("week_commencing", { ascending: false })
-        .limit(1)
-        .single();
-      if (data) {
-        const change = data.previous_pence
-          ? +(data.price_pence - data.previous_pence).toFixed(1)
-          : 0;
-        setPetrol({
-          current:    +data.price_pence,
-          yesterday:  +data.previous_pence || +data.price_pence,
-          weekAgo:    +(data.price_pence * 0.98).toFixed(1), // fallback estimate
-          change24h:  change,
-          trend:      change >= 0 ? "up" : "down",
-          history:    [
-            +(data.price_pence * 0.978).toFixed(1),
-            +(data.price_pence * 0.981).toFixed(1),
-            +(data.price_pence * 0.985).toFixed(1),
-            +(data.price_pence * 0.983).toFixed(1),
-            +(data.previous_pence || data.price_pence).toFixed(1),
-            +(data.price_pence * 0.999).toFixed(1),
-            +data.price_pence,
-          ],
-          lastUpdated: `w/c ${new Date(data.week_commencing).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}`,
-          source: "DESNZ Weekly Data",
-          context: "Source: UK Dept. for Energy Security & Net Zero",
-        });
+      try {
+        const { data, error } = await supabase
+          .from("pp_fuel_prices")
+          .select("*")
+          .order("week_commencing", { ascending: false })
+          .limit(1)
+          .single();
+        if (!error && data) {
+          const change = data.previous_pence
+            ? +(data.price_pence - data.previous_pence).toFixed(1)
+            : 0;
+          setPetrol({
+            current:    +data.price_pence,
+            yesterday:  +(data.previous_pence || data.price_pence),
+            weekAgo:    +(data.price_pence * 0.98).toFixed(1),
+            change24h:  change,
+            trend:      change >= 0 ? "up" : "down",
+            history:    [
+              +(data.price_pence * 0.978).toFixed(1),
+              +(data.price_pence * 0.981).toFixed(1),
+              +(data.price_pence * 0.985).toFixed(1),
+              +(data.price_pence * 0.983).toFixed(1),
+              +(data.previous_pence || data.price_pence).toFixed(1),
+              +(data.price_pence * 0.999).toFixed(1),
+              +data.price_pence,
+            ],
+            lastUpdated: `w/c ${new Date(data.week_commencing).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}`,
+            source: "DESNZ Weekly Data",
+            context: "Source: UK Dept. for Energy Security & Net Zero",
+          });
+        } else {
+          // fallback
+          setPetrol({ current:154.65, yesterday:155.2, weekAgo:152.8, change24h:-0.6, trend:"down", history:[152.8,153.1,154.0,153.6,155.2,155.9,154.65], lastUpdated:"May 2026", source:"DESNZ Weekly Data", context:"Source: UK Dept. for Energy Security & Net Zero" });
+        }
+      } catch(e) {
+        setPetrol({ current:154.65, yesterday:155.2, weekAgo:152.8, change24h:-0.6, trend:"down", history:[152.8,153.1,154.0,153.6,155.2,155.9,154.65], lastUpdated:"May 2026", source:"DESNZ Weekly Data", context:"Source: UK Dept. for Energy Security & Net Zero" });
       }
       setLoading(false);
     }

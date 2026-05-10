@@ -1344,18 +1344,18 @@ export default function PricePunch() {
   // Check for existing session on load
   useEffect(() => {
     supabase.auth.getSession().then((result) => {
-      try {
-        const session = result?.data?.session;
-        if (session) loadProfile(session.user.id);
-      } catch(e) { console.log("Session check failed", e); }
-    }).catch(e => console.log("getSession error", e));
+      const session = result?.data?.session;
+      if (session?.user?.id) loadProfile(session.user.id);
+    }).catch(() => {});
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      try {
-        if (session) loadProfile(session.user.id);
-      } catch(e) { console.log("Auth change error", e); }
+    const authListener = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.id) loadProfile(session.user.id);
+      else if (!session) { setUser(null); setPunches(0); setStreak(0); }
     });
-    return () => listener?.subscription?.unsubscribe();
+
+    return () => {
+      try { authListener?.data?.subscription?.unsubscribe(); } catch(e) {}
+    };
   }, []);
 
   async function loadProfile(userId) {

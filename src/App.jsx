@@ -521,7 +521,7 @@ function PredictScreen({ onSubmit, score, streak }) {
               transition:"all 0.15s", textAlign:"center",
             }}>
               <div style={{ fontSize:"1.8rem" }}>{it.emoji}</div>
-              <div style={{ fontSize:"9px", fontWeight:800, color:NAVY, textTransform:"uppercase", letterSpacing:"0.05em", marginTop:"4px", lineHeight:1.2, fontFamily:FONT_BODY }}>{it.name}</div>
+              <div style={{ fontSize:"10px", fontWeight:800, color:NAVY, textTransform:"uppercase", letterSpacing:"0.05em", marginTop:"4px", lineHeight:1.2, fontFamily:FONT_BODY }}>{it.name}</div>
               <div style={{ fontFamily:FONT_DISPLAY, fontSize:"15px", color:NAVY, marginTop:"3px" }}>{fmt(it.price)}</div>
             </button>
           ))}
@@ -714,7 +714,7 @@ function SettledScreen() {
 
             {/* Plain English summary */}
             <div style={{ background:"#f8f7f2", padding:"13px 18px", borderBottom:"2px solid #eee" }}>
-              <div style={{ fontSize:"12px", color:"#555", lineHeight:1.65, fontFamily:FONT_MONO }}>
+              <div style={{ fontSize:"14px", color:"#555", lineHeight:1.65, fontFamily:FONT_MONO }}>
                 I predicted{" "}
                 <span style={{ fontWeight:700, color:NAVY }}>{item.name}</span>
                 {" "}would{" "}
@@ -764,7 +764,7 @@ function SettledScreen() {
               <div style={{ fontFamily:FONT_MONO, fontSize:"13px", fontWeight:700, color:NAVY, marginBottom:"8px", lineHeight:1.4 }}>
                 "{explainer.headline}"
               </div>
-              <p style={{ fontSize:"12px", color:"#666", lineHeight:1.6, marginBottom:"12px", fontFamily:FONT_MONO }}>
+              <p style={{ fontSize:"14px", color:"#666", lineHeight:1.6, marginBottom:"12px", fontFamily:FONT_MONO }}>
                 {explainer.summary}
               </p>
               <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom:"13px" }}>
@@ -773,7 +773,7 @@ function SettledScreen() {
                     <div style={{ width:"34px", height:"34px", background:"white", borderRadius:"9px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px", flexShrink:0, border:"1.5px solid #eee" }}>{b.icon}</div>
                     <div>
                       <div style={{ fontSize:"10px", fontWeight:800, color:NAVY, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"2px", fontFamily:FONT_BODY }}>{b.label}</div>
-                      <div style={{ fontSize:"11px", color:"#666", lineHeight:1.5, fontFamily:FONT_MONO }}>{b.text}</div>
+                      <div style={{ fontSize:"13px", color:"#666", lineHeight:1.5, fontFamily:FONT_MONO }}>{b.text}</div>
                     </div>
                   </div>
                 ))}
@@ -1307,7 +1307,7 @@ export default function PricePunch() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@400;600;700;800;900&family=Courier+Prime:wght@400;700&display=swap');
         * { box-sizing:border-box; margin:0; padding:0; }
-        body { background:${CREAM}; min-height:100vh; }
+        body { background:${CREAM}; min-height:100vh; font-size:16px; -webkit-text-size-adjust:100%; }
 
         @keyframes slideIn {
           from { opacity:0; transform:translateY(10px); }

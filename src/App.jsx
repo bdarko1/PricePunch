@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 
-// ─── Supabase ─────────────────────────────────────────────────────────────────
-
-const supabase = createClient(
-  "https://gsvxwxdyuqlrlphwxquz.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdzdnh3eGR5dXFscmxwaHd4cXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzU5MTAsImV4cCI6MjA5MDMxMTkxMH0.WIQoECMsIfcT-o-tNcRqc1q4MEnWEF6jkzel-UzPo5k"
-);
+// ─── Safe Supabase mock — replace with real client when ready ─────────────────
+const noopPromise = () => Promise.resolve({ data: null, error: null });
+const supabase = {
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null } }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signUp: noopPromise,
+    signInWithPassword: noopPromise,
+    signOut: noopPromise,
+  },
+  from: () => ({
+    select: () => ({ eq: () => ({ single: noopPromise }), order: () => ({ limit: () => ({ single: noopPromise }) }) }),
+    insert: noopPromise,
+  }),
+};
 
 // ─── Auth Modal ───────────────────────────────────────────────────────────────
 

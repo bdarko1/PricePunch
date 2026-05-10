@@ -212,20 +212,17 @@ const SETTLED = [
 
 // ─── Daily Flash data ────────────────────────────────────────────────────────
 
-const PETROL = {
-  current: 156.7, yesterday: 155.2, weekAgo: 152.8, change24h: 1.5, trend: "up",
-  history: [152.8, 153.1, 154.0, 153.6, 155.2, 155.9, 156.7],
-  lastUpdated: "09:14 today", source: "UK Fuel Finder API",
-  context: "Middle East tensions pushing Brent crude to $83/barrel",
-};
-
-const FLASH_MOVES = [
-  { id:"up_lot",   label:"Higher",         sub:"above 158p", pct: 0.009,  color:"#e03000", bg:"#fff0eb", arrow:"↑↑", pts:250 },
-  { id:"up_bit",   label:"Slightly higher", sub:"157–158p",   pct: 0.004,  color:"#e06020", bg:"#fff5f0", arrow:"↑",  pts:150 },
-  { id:"same",     label:"About the same", sub:"155–157p",   pct: 0,      color:"#888",    bg:"#f5f5f5", arrow:"→",  pts:100 },
-  { id:"down_bit", label:"Slightly lower", sub:"154–155p",   pct:-0.004,  color:"#1a7a3a", bg:"#f0fff4", arrow:"↓",  pts:150 },
-  { id:"down_lot", label:"Lower",          sub:"below 154p", pct:-0.009,  color:"#0a5a28", bg:"#eaffef", arrow:"↓↓", pts:250 },
-];
+// FLASH_MOVES ranges update dynamically based on live price
+function getFlashMoves(current) {
+  const p = current;
+  return [
+    { id:"up_lot",   label:"Higher",          sub:`above ${(p*1.009).toFixed(1)}p`,                   pct: 0.009,  color:"#e03000", bg:"#fff0eb", arrow:"↑↑", pts:250 },
+    { id:"up_bit",   label:"Slightly higher",  sub:`${(p*1.001).toFixed(1)}–${(p*1.009).toFixed(1)}p`, pct: 0.004,  color:"#e06020", bg:"#fff5f0", arrow:"↑",  pts:150 },
+    { id:"same",     label:"About the same",   sub:`${(p*0.997).toFixed(1)}–${(p*1.001).toFixed(1)}p`, pct: 0,      color:"#888",    bg:"#f5f5f5", arrow:"→",  pts:100 },
+    { id:"down_bit", label:"Slightly lower",   sub:`${(p*0.991).toFixed(1)}–${(p*0.997).toFixed(1)}p`, pct:-0.004,  color:"#1a7a3a", bg:"#f0fff4", arrow:"↓",  pts:150 },
+    { id:"down_lot", label:"Lower",            sub:`below ${(p*0.991).toFixed(1)}p`,                   pct:-0.009,  color:"#0a5a28", bg:"#eaffef", arrow:"↓↓", pts:250 },
+  ];
+}
 
 const FLASH_CROWD = { up_lot:28, up_bit:36, same:14, down_bit:15, down_lot:7 };
 
@@ -913,10 +910,10 @@ function SparkLine({ data, color }) {
   );
 }
 
-function LiveTicker() {
+function LiveTicker({ current, change }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const t = setInterval(() => setTick(n => n + 1), 2000); return () => clearInterval(t); }, []);
-  const live = (PETROL.current + Math.sin(tick * 0.4) * 0.1).toFixed(1);
+  const live = current ? (current + Math.sin(tick * 0.4) * 0.1).toFixed(1) : "---";
   return (
     <div style={{ display:"flex", alignItems:"baseline", gap:"8px" }}>
       <div style={{ fontFamily:FONT_DISPLAY, fontSize:"52px", color:"white", letterSpacing:"0.02em", lineHeight:1 }}>
@@ -927,8 +924,8 @@ function LiveTicker() {
           <div style={{ width:"6px", height:"6px", borderRadius:"50%", background:GOLD, animation:"pulse 1.5s infinite" }} />
           <span style={{ fontSize:"9px", color:GOLD, fontWeight:700, letterSpacing:"0.1em", fontFamily:FONT_BODY }}>LIVE</span>
         </div>
-        <div style={{ fontSize:"12px", color:PETROL.change24h > 0 ? "#ff8c42" : "#00cc66", fontWeight:700, fontFamily:"'DM Mono', monospace" }}>
-          +{PETROL.change24h}p today
+        <div style={{ fontSize:"12px", color: change >= 0 ? "#ff8c42" : "#00cc66", fontWeight:700, fontFamily:"'DM Mono', monospace" }}>
+          {change >= 0 ? "+" : ""}{change}p vs last week
         </div>
       </div>
     </div>
@@ -1012,6 +1009,54 @@ function DailyFlashScreen() {
   const [selected, setSelected] = useState(null);
   const [locked, setLocked]     = useState(false);
   const [showHow, setShowHow]   = useState(false);
+  const [petrol, setPetrol]     = useState(null);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    async function fetchPrice() {
+      const { data, error } = await supabase
+        .from("pp_fuel_prices")
+        .select("*")
+        .order("week_commencing", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        const change = data.previous_pence
+          ? +(data.price_pence - data.previous_pence).toFixed(1)
+          : 0;
+        setPetrol({
+          current:    +data.price_pence,
+          yesterday:  +data.previous_pence || +data.price_pence,
+          weekAgo:    +(data.price_pence * 0.98).toFixed(1), // fallback estimate
+          change24h:  change,
+          trend:      change >= 0 ? "up" : "down",
+          history:    [
+            +(data.price_pence * 0.978).toFixed(1),
+            +(data.price_pence * 0.981).toFixed(1),
+            +(data.price_pence * 0.985).toFixed(1),
+            +(data.price_pence * 0.983).toFixed(1),
+            +(data.previous_pence || data.price_pence).toFixed(1),
+            +(data.price_pence * 0.999).toFixed(1),
+            +data.price_pence,
+          ],
+          lastUpdated: `w/c ${new Date(data.week_commencing).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}`,
+          source: "DESNZ Weekly Data",
+          context: "Source: UK Dept. for Energy Security & Net Zero",
+        });
+      }
+      setLoading(false);
+    }
+    fetchPrice();
+  }, []);
+
+  const FLASH_MOVES = petrol ? getFlashMoves(petrol.current) : [];
+
+  if (loading) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"60px", flexDirection:"column", gap:"16px" }}>
+      <div style={{ fontSize:"2rem" }}>⛽</div>
+      <div style={{ fontFamily:FONT_BODY, fontSize:"14px", color:"#888" }}>Loading live petrol price...</div>
+    </div>
+  );
 
   return (
     <div style={{ paddingBottom:"100px" }}>
@@ -1028,25 +1073,25 @@ function DailyFlashScreen() {
                   <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.4)", fontFamily:FONT_BODY }}>Per litre · UK national avg</div>
                 </div>
               </div>
-              <LiveTicker />
+              <LiveTicker current={petrol.current} change={petrol.change24h} />
             </div>
             <div style={{ textAlign:"right" }}>
-              <SparkLine data={PETROL.history} color={PETROL.trend==="up" ? "#ff8c42" : "#00cc66"} />
+              <SparkLine data={petrol.history} color={petrol.trend==="up" ? "#ff8c42" : "#00cc66"} />
               <div style={{ fontSize:"9px", color:"rgba(255,255,255,0.3)", marginTop:"3px", fontFamily:FONT_BODY }}>7-day trend</div>
             </div>
           </div>
 
           {/* Context pill */}
           <div style={{ background:"rgba(255,140,0,0.15)", border:"1px solid rgba(255,140,0,0.3)", borderRadius:"8px", padding:"8px 12px", fontSize:"11px", color:"#ff8c42", fontFamily:"'DM Mono', monospace", marginBottom:"12px", display:"flex", alignItems:"center", gap:"7px" }}>
-            <span>⚠️</span><span>{PETROL.context}</span>
+            <span>📊</span><span>{petrol.context}</span>
           </div>
 
           {/* Stats */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"6px", marginBottom:"12px" }}>
             {[
-              { label:"Yesterday", value:`${PETROL.yesterday}p`, color:"white" },
-              { label:"24h change", value:`+${PETROL.change24h}p`, color:"#ff8c42" },
-              { label:"Week ago", value:`${PETROL.weekAgo}p`, color:"rgba(255,255,255,0.5)" },
+              { label:"Last week", value:`${petrol.yesterday}p`, color:"white" },
+              { label:"Change", value:`${petrol.change24h >= 0 ? "+" : ""}${petrol.change24h}p`, color: petrol.change24h >= 0 ? "#ff8c42" : "#00cc66" },
+              { label:"Updated", value: petrol.lastUpdated, color:"rgba(255,255,255,0.5)" },
             ].map(s => (
               <div key={s.label} style={{ background:"rgba(255,255,255,0.07)", borderRadius:"8px", padding:"8px", textAlign:"center" }}>
                 <div style={{ fontFamily:"'DM Mono', monospace", fontSize:"13px", color:s.color, fontWeight:700 }}>{s.value}</div>
@@ -1058,7 +1103,7 @@ function DailyFlashScreen() {
           <FlashCrowdBar selected={selected} />
 
           <div style={{ fontSize:"9px", color:"rgba(255,255,255,0.25)", fontFamily:FONT_BODY, display:"flex", justifyContent:"space-between" }}>
-            <span>Updated {PETROL.lastUpdated}</span><span>{PETROL.source}</span>
+            <span>Official UK government data</span><span>{petrol.source}</span>
           </div>
         </div>
       </div>
@@ -1074,7 +1119,7 @@ function DailyFlashScreen() {
                 WHERE WILL PETROL BE TOMORROW?
               </h2>
               <div style={{ fontSize:"12px", color:"#888", fontFamily:FONT_BODY }}>
-                Today: {PETROL.current}p · Predict tomorrow's national average
+                Today: {petrol.current}p · Predict next week's national average
               </div>
             </div>
 

@@ -424,6 +424,7 @@ function HotStrip({ onPick, selectedId, items }) {
       <div style={{ display:"flex", gap:"9px", overflowX:"auto", paddingBottom:"4px" }}>
         {HOT_ITEMS.map((h, idx) => {
           const it = liveItems.find(i => i.id === h.id);
+          if (!it) return null;
           const sel = selectedId === it.id;
           const leanColor = h.lean === "up" ? "#cc3300" : "#1a7a3a";
           const leanArrow = h.lean === "up" ? "↑" : "↓";

@@ -144,14 +144,27 @@ function AuthModal({ onAuth, trigger }) {
 }
 
 
-const ITEMS = [
-  { id: "eggs",    name: "Free Range Eggs (12)", emoji: "🥚", price: 3.25, category: "Dairy" },
-  { id: "milk",    name: "Semi-Skimmed Milk (2L)", emoji: "🥛", price: 1.45, category: "Dairy" },
+// Static item metadata (emojis + categories stay hardcoded, prices come from Supabase)
+const ITEM_META = {
+  eggs:    { emoji: "🥚", category: "Dairy" },
+  milk:    { emoji: "🥛", category: "Dairy" },
+  bread:   { emoji: "🍞", category: "Bakery" },
+  butter:  { emoji: "🧈", category: "Dairy" },
+  chicken: { emoji: "🍗", category: "Meat" },
+  coffee:  { emoji: "☕", category: "Drinks" },
+  pasta:   { emoji: "🍝", category: "Pantry" },
+  cheese:  { emoji: "🧀", category: "Dairy" },
+  bananas: { emoji: "🍌", category: "Fruit" },
+};
+
+// Fallback prices if Supabase is slow
+const ITEMS_FALLBACK = [
+  { id: "eggs",    name: "Free Range Eggs (12)", emoji: "🥚", price: 3.31, category: "Dairy" },
+  { id: "milk",    name: "Semi-Skimmed Milk (2L)", emoji: "🥛", price: 1.43, category: "Dairy" },
   { id: "bread",   name: "White Sliced Bread",   emoji: "🍞", price: 1.15, category: "Bakery" },
-  { id: "butter",  name: "Salted Butter (250g)", emoji: "🧈", price: 2.10, category: "Dairy" },
-  { id: "chicken", name: "Chicken Breast (500g)",emoji: "🍗", price: 4.50, category: "Meat" },
-  { id: "petrol",  name: "Unleaded Petrol",      emoji: "⛽", price: 1.38, category: "Fuel" },
-  { id: "coffee",  name: "Instant Coffee (200g)",emoji: "☕", price: 4.80, category: "Drinks" },
+  { id: "butter",  name: "Salted Butter (250g)", emoji: "🧈", price: 2.01, category: "Dairy" },
+  { id: "chicken", name: "Chicken Breast (500g)",emoji: "🍗", price: 4.69, category: "Meat" },
+  { id: "coffee",  name: "Instant Coffee (200g)",emoji: "☕", price: 4.89, category: "Drinks" },
   { id: "pasta",   name: "Spaghetti (500g)",     emoji: "🍝", price: 0.89, category: "Pantry" },
   { id: "cheese",  name: "Cheddar Cheese (400g)",emoji: "🧀", price: 3.60, category: "Dairy" },
   { id: "bananas", name: "Bananas (5 pack)",     emoji: "🍌", price: 0.68, category: "Fruit" },
@@ -393,7 +406,8 @@ const HOT_ITEMS = [
   { id:"chicken", predictions: 1590, lean:"up",   leanPct: 58, hot: false },
 ];
 
-function HotStrip({ onPick, selectedId }) {
+function HotStrip({ onPick, selectedId, items }) {
+  const liveItems = items || ITEMS_FALLBACK;
   return (
     <div style={{ marginBottom:"18px" }}>
       {/* Header row */}
@@ -409,7 +423,7 @@ function HotStrip({ onPick, selectedId }) {
       {/* Horizontal scroll row */}
       <div style={{ display:"flex", gap:"9px", overflowX:"auto", paddingBottom:"4px" }}>
         {HOT_ITEMS.map((h, idx) => {
-          const it = ITEMS.find(i => i.id === h.id);
+          const it = liveItems.find(i => i.id === h.id);
           const sel = selectedId === it.id;
           const leanColor = h.lean === "up" ? "#cc3300" : "#1a7a3a";
           const leanArrow = h.lean === "up" ? "↑" : "↓";
@@ -479,8 +493,34 @@ function PredictScreen({ onSubmit, score, streak }) {
   const [move, setMove]   = useState(null);
   const [tf, setTf]       = useState(null);
   const [search, setSearch] = useState("");
+  const [items, setItems] = useState(ITEMS_FALLBACK);
+  const [pricesLoaded, setPricesLoaded] = useState(false);
 
-  const filtered = ITEMS.filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => {
+    async function fetchPrices() {
+      const { data } = await supabase
+        .from("pp_grocery_prices")
+        .select("*")
+        .order("item_id");
+      if (data && data.length > 0) {
+        const live = data.map(row => ({
+          id: row.item_id,
+          name: row.item_name,
+          emoji: ITEM_META[row.item_id]?.emoji || "🛒",
+          price: +row.price_gbp,
+          previousPrice: +row.previous_gbp,
+          category: ITEM_META[row.item_id]?.category || "Other",
+          source: row.source,
+          monthYear: row.month_year,
+        }));
+        setItems(live);
+        setPricesLoaded(true);
+      }
+    }
+    fetchPrices();
+  }, []);
+
+  const filtered = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
   const pts = move && tf ? calcPts(move.pct, tf.mult, streak) : 0;
 
   function submit() {
@@ -496,13 +536,20 @@ function PredictScreen({ onSubmit, score, streak }) {
         <h2 style={{ fontFamily:FONT_DISPLAY, fontSize:"26px", color:NAVY, letterSpacing:"0.04em", marginBottom:"14px" }}>WHAT'S CHANGING PRICE?</h2>
 
         {/* Hot items strip */}
-        <HotStrip onPick={setItem} selectedId={item?.id} />
+        <HotStrip onPick={setItem} selectedId={item?.id} items={items} />
 
         {/* Divider */}
         <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"12px" }}>
           <div style={{ flex:1, height:"1px", background:"#e0ddd6" }} />
           <div style={{ fontSize:"9px", fontWeight:800, color:"#bbb", textTransform:"uppercase", letterSpacing:"0.1em", fontFamily:FONT_BODY }}>Or browse all</div>
           <div style={{ flex:1, height:"1px", background:"#e0ddd6" }} />
+        </div>
+
+        {/* Data source badge */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", marginBottom:"8px" }}>
+          <div style={{ fontSize:"9px", color:"#aaa", fontFamily:FONT_BODY }}>
+            {pricesLoaded ? "✓ Live prices · Trolley.co.uk" : "Loading live prices..."}
+          </div>
         </div>
 
         <input type="text" placeholder="Search…" value={search} onChange={e=>setSearch(e.target.value)}

@@ -1342,21 +1342,30 @@ export default function PricePunch() {
 
   // Check for existing session on load
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) loadProfile(session.user.id);
+    supabase.auth.getSession().then((result) => {
+      try {
+        const session = result?.data?.session;
+        if (session) loadProfile(session.user.id);
+      } catch(e) { console.log("Session check failed", e); }
+    }).catch(e => console.log("getSession error", e));
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      try {
+        if (session) loadProfile(session.user.id);
+      } catch(e) { console.log("Auth change error", e); }
     });
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) loadProfile(session.user.id);
-    });
+    return () => listener?.subscription?.unsubscribe();
   }, []);
 
   async function loadProfile(userId) {
-    const { data } = await supabase.from("pp_users").select("*").eq("id", userId).single();
-    if (data) {
-      setUser(data);
-      setPunches(data.punches);
-      setStreak(data.streak);
-    }
+    try {
+      const { data } = await supabase.from("pp_users").select("*").eq("id", userId).single();
+      if (data) {
+        setUser(data);
+        setPunches(data.punches);
+        setStreak(data.streak);
+      }
+    } catch(e) { console.log("loadProfile error", e); }
   }
 
   function triggerAuth(trigger = "default") {
@@ -1386,17 +1395,19 @@ export default function PricePunch() {
 
     // Save to Supabase if logged in
     if (user) {
-      const settlesAt = new Date(Date.now() + tf.days * 86400000).toISOString();
-      await supabase.from("pp_predictions").insert({
-        user_id: user.id,
-        item_id: item.id,
-        item_name: item.name,
-        move_label: move.label,
-        move_direction: move.dir,
-        timeframe: tf.label,
-        potential_punches: pts,
-        settles_at: settlesAt,
-      });
+      try {
+        const settlesAt = new Date(Date.now() + tf.days * 86400000).toISOString();
+        await supabase.from("pp_predictions").insert({
+          user_id: user.id,
+          item_id: item.id,
+          item_name: item.name,
+          move_label: move.label,
+          move_direction: move.dir,
+          timeframe: tf.label,
+          potential_punches: pts,
+          settles_at: settlesAt,
+        });
+      } catch(e) { console.log("Prediction save error", e); }
     } else {
       // Guest — prompt sign up after first prediction
       setTimeout(() => triggerAuth("prediction"), 1500);

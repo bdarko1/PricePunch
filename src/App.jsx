@@ -187,7 +187,7 @@ const TIMEFRAMES = [
 const SETTLED = [
   {
     id: 1,
-    item: ITEMS[0],
+    item: ITEMS_FALLBACK[0],
     predDir: "up", predLabel: "UP a lot",
     actualDir: "up", actualPct: 12.3,
     startPrice: 3.25, actualPrice: 3.65, predPrice: 3.58,
@@ -205,7 +205,7 @@ const SETTLED = [
   },
   {
     id: 2,
-    item: ITEMS[3],
+    item: ITEMS_FALLBACK[3],
     predDir: "up", predLabel: "UP a bit",
     actualDir: "down", actualPct: -5.7,
     startPrice: 2.10, actualPrice: 1.98, predPrice: 2.16,

@@ -1236,7 +1236,7 @@ export default function PricePunch() {
             <div style={{ fontFamily:FONT_DISPLAY, fontSize:"34px", color:GOLD, letterSpacing:"0.06em", lineHeight:1 }}>
               PRICE<span style={{ color:"white" }}>PUNCH</span>
             </div>
-            <div style={{ fontSize:"9px", color:"#555", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:"3px", fontFamily:FONT_BODY }}>
+            <div style={{ fontSize:"9px", color:"rgba(255,255,255,0.5)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:"3px", fontFamily:FONT_BODY }}>
               Predict · Learn · Win
             </div>
           </div>
@@ -1245,7 +1245,7 @@ export default function PricePunch() {
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"28px" }}>
             <div style={{ background:"rgba(255,255,255,0.07)", borderRadius:"12px", padding:"12px", textAlign:"center" }}>
               <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:"#ff8c42" }}>🔥 {streak}</div>
-              <div style={{ fontSize:"8px", color:"#555", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Streak</div>
+              <div style={{ fontSize:"8px", color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:FONT_BODY }}>Streak</div>
             </div>
             <div style={{ background:GOLD, borderRadius:"12px", padding:"12px", textAlign:"center" }}>
               <div style={{ fontFamily:FONT_DISPLAY, fontSize:"22px", color:NAVY }}>{score.toLocaleString()}</div>
@@ -1258,7 +1258,7 @@ export default function PricePunch() {
             {TABS.map(t=>(
               <button key={t.id} className={`desktop-nav-btn ${tab===t.id?"active":""}`} onClick={()=>setTab(t.id)}>
                 <span style={{ fontSize:"20px" }}>{t.emoji}</span>
-                <span style={{ fontSize:"14px", fontWeight:800, color: tab===t.id ? NAVY : "rgba(255,255,255,0.6)", fontFamily:FONT_BODY }}>
+                <span style={{ fontSize:"14px", fontWeight:800, color: tab===t.id ? NAVY : "rgba(255,255,255,0.85)", fontFamily:FONT_BODY }}>
                   {t.label}
                 </span>
               </button>
@@ -1267,8 +1267,8 @@ export default function PricePunch() {
 
           {/* Footer */}
           <div style={{ paddingLeft:"8px", marginTop:"auto" }}>
-            <div style={{ fontSize:"10px", color:"#444", fontFamily:FONT_BODY }}>pricepunch.co.uk</div>
-            <div style={{ fontSize:"9px", color:"#333", fontFamily:FONT_BODY, marginTop:"2px" }}>Beta · Free to play</div>
+            <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.4)", fontFamily:FONT_BODY }}>pricepunch.co.uk</div>
+            <div style={{ fontSize:"9px", color:"rgba(255,255,255,0.3)", fontFamily:FONT_BODY, marginTop:"2px" }}>Beta · Free to play</div>
           </div>
         </div>
 

@@ -1080,7 +1080,7 @@ export default function PricePunch() {
   const [streak, setStreak]   = useState(3);
   const [predictions, setPredictions] = useState([]);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("pp_seen"));
 
   function handleSubmit({ item, move, tf, pts }) {
     setPredictions(prev => [{ id:Date.now(), item, move, tf, pts }, ...prev]);
@@ -1185,7 +1185,7 @@ export default function PricePunch() {
       `}</style>
 
       {showConfetti && <Confetti />}
-      {showOnboarding && <OnboardingModal onDone={() => setShowOnboarding(false)} />}
+      {showOnboarding && <OnboardingModal onDone={() => { localStorage.setItem("pp_seen","1"); setShowOnboarding(false); }} />}
 
       {/* ── MOBILE layout (< 900px) ── */}
       <div className="app-shell">
